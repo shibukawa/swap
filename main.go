@@ -26,6 +26,7 @@ import "C"
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/mobile/exp/audio"
 	"log"
 	"time"
@@ -40,7 +41,7 @@ func (rsk ReadSeekCloser) Close() error {
 }
 
 func main() {
-	tick := time.Tick(time.Duration(10) * time.Millisecond)
+	tick := time.Tick(time.Duration(16) * time.Millisecond)
 	C.Init()
 	lastSwap := C.SwapCount()
 	noise := ReadSeekCloser{bytes.NewReader(MustAsset("sound/noise.wav"))}
@@ -52,6 +53,11 @@ func main() {
 	for _ = range tick {
 		swap := C.SwapCount()
 		if swap != lastSwap {
+			fmt.Println("swap count:", swap)
+			state := player.State()
+			if state == audio.Playing || state == audio.Paused {
+				player.Stop()
+			}
 			player.Seek(0)
 			player.Play()
 			lastSwap = swap
