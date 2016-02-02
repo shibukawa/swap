@@ -1,4 +1,5 @@
 package main
+
 /*
 #include <mach/mach.h>
 #include <mach/vm_page_size.h>
@@ -20,23 +21,40 @@ int64_t SwapCount()
 	}
     return (int64_t)(vm_stat.swapins + vm_stat.swapouts);
 }
- */
+*/
 import "C"
 
 import (
-    "fmt"
-    "time"
+	"bytes"
+	"golang.org/x/mobile/exp/audio"
+	"log"
+	"time"
 )
 
+type ReadSeekCloser struct {
+	*bytes.Reader
+}
+
+func (rsk ReadSeekCloser) Close() error {
+	return nil
+}
+
 func main() {
-    tick := time.Tick(time.Duration(25) * time.Millisecond)
-    C.Init()
-    lastSwap := C.SwapCount()
-    for _ = range tick {
-        swap := C.SwapCount()
-        if swap != lastSwap {
-            fmt.Println(swap)
-            lastSwap = swap
-        }
-    }
+	tick := time.Tick(time.Duration(10) * time.Millisecond)
+	C.Init()
+	lastSwap := C.SwapCount()
+	noise := ReadSeekCloser{bytes.NewReader(MustAsset("sound/noise.wav"))}
+	player, err := audio.NewPlayer(noise, audio.Mono16, 44100)
+	if err != nil {
+		log.Fatal(err)
+	}
+	player.SetVolume(1.0)
+	for _ = range tick {
+		swap := C.SwapCount()
+		if swap != lastSwap {
+			player.Seek(0)
+			player.Play()
+			lastSwap = swap
+		}
+	}
 }
